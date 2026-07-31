@@ -34,6 +34,7 @@
 .status-title{font-size:.8rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
 .status-value{font-size:1rem;font-weight:700;color:#111827;margin-top:2px}
 .status-sub{font-size:.9rem;color:#6b7280}
+.status-meta-group{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .wait-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-weight:700}
 .menu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .menu-card{display:flex;flex-direction:column;justify-content:space-between;padding:14px;border-radius:12px;border:1px solid #eef2f7;background:linear-gradient(180deg,#fff,#fbfdff)}
@@ -69,8 +70,17 @@
 .wait-footer-meta{margin-top:8px;font-weight:700;color:#b45309}
 .wait-actions-inline{display:flex;gap:8px;flex-wrap:wrap}
 
-.admin-login-card, .admin-card{background:#fff;border:1px solid #eef2f7;border-radius:16px;padding:16px}
+.admin-login-card, .admin-card, .seat-admin-card{background:#fff;border:1px solid #eef2f7;border-radius:16px;padding:16px}
 .admin-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.seat-select-label{display:flex;flex-direction:column;gap:6px;font-weight:600;margin-bottom:12px}
+.seat-select-label select{padding:10px;border:1px solid #e5e7eb;border-radius:8px}
+.seat-info-box{padding:10px 12px;border:1px solid #eef2f7;border-radius:10px;background:#f8fafc;margin-bottom:12px}
+.seat-grid{display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:10px}
+.seat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px 8px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer}
+.seat-btn.assigned{background:#ecfdf3;border-color:#a7f3d0}
+.seat-btn.occupied{background:#fef2f2;border-color:#fecaca;opacity:.8}
+.seat-number{font-weight:700}
+.seat-status{font-size:.8rem;color:#6b7280}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .admin-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .admin-list-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px;border:1px solid #eef2f7;border-radius:10px;background:#fdfdfd}
@@ -96,6 +106,7 @@
   .wait-form, .admin-login-form, .admin-form{grid-template-columns:1fr}
   .admin-grid{grid-template-columns:1fr}
   .menu-list{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .seat-grid{grid-template-columns:repeat(3, minmax(0, 1fr))}
 }
 
 @media (max-width:480px){
@@ -110,4 +121,5 @@
   .wait-actions-inline{width:100%}
   .wait-person-info{font-size:.9rem}
   .order-summary-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .seat-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 }

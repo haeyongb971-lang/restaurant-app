@@ -36,6 +36,11 @@ export default function App() {
     return Number.isFinite(stored) && stored > 0 ? stored : null
   })
   const [orders, setOrders] = useState(() => getStoredValue('orders', []).map(order => ({ ...order, status: order.status || '접수' })))
+  const [seatAssignments, setSeatAssignments] = useState(() => getStoredValue('seatAssignments', {}))
+  const [seatTargetWaitNumber, setSeatTargetWaitNumber] = useState(() => {
+    const stored = Number(getStoredValue('seatTargetWaitNumber', null))
+    return Number.isFinite(stored) && stored > 0 ? stored : null
+  })
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => getStoredValue('adminAuthenticated', false))
   const [adminPassword, setAdminPassword] = useState('')
   const [adminMenuForm, setAdminMenuForm] = useState({ id: null, name: '', price: '', desc: '', category: '' })
@@ -54,12 +59,29 @@ export default function App() {
     }
   }, [activeWaitNumber])
   useEffect(() => {
+    localStorage.setItem('seatAssignments', JSON.stringify(seatAssignments))
+  }, [seatAssignments])
+  useEffect(() => {
+    if (seatTargetWaitNumber) {
+      localStorage.setItem('seatTargetWaitNumber', String(seatTargetWaitNumber))
+    } else {
+      localStorage.removeItem('seatTargetWaitNumber')
+    }
+  }, [seatTargetWaitNumber])
+  useEffect(() => {
     if (adminAuthenticated) {
       localStorage.setItem('adminAuthenticated', 'true')
     } else {
       localStorage.removeItem('adminAuthenticated')
     }
   }, [adminAuthenticated])
+  useEffect(() => {
+    if (!seatTargetWaitNumber && waitlist.length > 0) {
+      setSeatTargetWaitNumber(waitlist[0].waitNumber)
+    } else if (seatTargetWaitNumber && !waitlist.some(w => w.waitNumber === seatTargetWaitNumber)) {
+      setSeatTargetWaitNumber(waitlist[0]?.waitNumber ?? null)
+    }
+  }, [waitlist, seatTargetWaitNumber])
 
   const categories = useMemo(() => ['전체', ...Array.from(new Set(menu.map(m => m.category)))], [menu])
   const filtered = useMemo(() => category === '전체' ? menu : menu.filter(m => m.category === category), [menu, category])
@@ -141,6 +163,39 @@ export default function App() {
     setWaitlist(prev => prev.filter(w => w.id !== id))
   }
 
+  function assignSeat(waitNumber, seatNumber) {
+    if (!waitNumber || !seatNumber) return
+
+    const selectedSeat = Number(seatNumber)
+    const currentOwner = Object.entries(seatAssignments).find(([key, value]) => Number(value) === selectedSeat)
+    const sameOwner = currentOwner && Number(currentOwner[0]) === waitNumber
+
+    if (sameOwner) {
+      setSeatAssignments(prev => {
+        const next = { ...prev }
+        delete next[String(waitNumber)]
+        return next
+      })
+      return
+    }
+
+    if (currentOwner && Number(currentOwner[0]) !== waitNumber) {
+      alert('이미 사용 중인 좌석입니다.')
+      return
+    }
+
+    setSeatAssignments(prev => ({ ...prev, [String(waitNumber)]: selectedSeat }))
+  }
+
+  function releaseSeat(waitNumber) {
+    if (!waitNumber) return
+    setSeatAssignments(prev => {
+      const next = { ...prev }
+      delete next[String(waitNumber)]
+      return next
+    })
+  }
+
   function handleAdminLogin(e) {
     e.preventDefault()
     if (adminPassword === ADMIN_PASSWORD) {
@@ -204,6 +259,7 @@ export default function App() {
           <button className="btn ghost" onClick={() => setView('menu')}>메뉴</button>
           <button className="btn" onClick={() => setView('checkout')}>장바구니 ({cart.reduce((s, c) => s + c.qty, 0)})</button>
           <button className="btn soft" onClick={() => setView('waitlist')}>대기등록</button>
+          {adminAuthenticated && <button className="btn ghost" onClick={() => setView('seatAdmin')}>좌석 지정</button>}
           <button className="btn ghost" onClick={() => { if (adminAuthenticated) setView('admin'); else setView('adminLogin') }}>관리자 모드</button>
         </div>
       </header>
@@ -223,6 +279,74 @@ export default function App() {
                   <button className="btn ghost" type="button" onClick={() => setView('menu')}>취소</button>
                 </div>
               </form>
+            </div>
+          </section>
+        )}
+
+        {view === 'seatAdmin' && (
+          <section className="admin-screen">
+            <div className="admin-header">
+              <div>
+                <h2>좌석 지정</h2>
+                <p className="muted">대기번호를 선택한 뒤 빈 좌석을 배정하거나 해제할 수 있습니다.</p>
+              </div>
+              <button className="btn ghost" onClick={() => setView('admin')}>관리자 화면</button>
+            </div>
+
+            <div className="seat-admin-card">
+              <label className="seat-select-label">대기번호 선택
+                <select value={seatTargetWaitNumber ?? ''} onChange={e => setSeatTargetWaitNumber(Number(e.target.value) || null)}>
+                  <option value="">대기팀 선택</option>
+                  {waitlist.map(item => (
+                    <option key={item.id} value={item.waitNumber}>대기 {item.waitNumber}번 · {item.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              {seatTargetWaitNumber ? (
+                <div className="seat-info-box">
+                  <div>선택된 대기번호: <strong>대기 {seatTargetWaitNumber}번</strong></div>
+                  <div>현재 배정 좌석: <strong>{seatAssignments[String(seatTargetWaitNumber)] ? `${seatAssignments[String(seatTargetWaitNumber)]}번` : '미배정'}</strong></div>
+                </div>
+              ) : null}
+
+              <div className="seat-grid">
+                {Array.from({ length: 13 }, (_, index) => {
+                  const seatNumber = index + 1
+                  const assignedOwner = Object.entries(seatAssignments).find(([, value]) => Number(value) === seatNumber)
+                  const ownerWaitNumber = assignedOwner ? Number(assignedOwner[0]) : null
+                  const isAssignedToTarget = seatTargetWaitNumber && seatAssignments[String(seatTargetWaitNumber)] === seatNumber
+                  const isOccupiedByOther = ownerWaitNumber !== null && ownerWaitNumber !== seatTargetWaitNumber
+
+                  return (
+                    <button
+                      key={seatNumber}
+                      className={`seat-btn ${isAssignedToTarget ? 'assigned' : ''} ${isOccupiedByOther ? 'occupied' : ''}`}
+                      type="button"
+                      onClick={() => {
+                        if (!seatTargetWaitNumber) {
+                          alert('대기번호를 먼저 선택해주세요.')
+                          return
+                        }
+                        if (isAssignedToTarget) {
+                          releaseSeat(seatTargetWaitNumber)
+                        } else if (isOccupiedByOther) {
+                          alert('이미 사용 중인 좌석입니다.')
+                        } else {
+                          assignSeat(seatTargetWaitNumber, seatNumber)
+                        }
+                      }}
+                    >
+                      <span className="seat-number">{seatNumber}번</span>
+                      <span className="seat-status">{isAssignedToTarget ? '배정됨' : isOccupiedByOther ? '사용중' : '빈좌석'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="admin-actions">
+                <button className="btn soft" type="button" onClick={() => releaseSeat(seatTargetWaitNumber)} disabled={!seatTargetWaitNumber || !seatAssignments[String(seatTargetWaitNumber)]}>선택 대기번호 해제</button>
+              </div>
             </div>
           </section>
         )}
@@ -339,7 +463,10 @@ export default function App() {
                     {currentWait ? <>대기 <span className="wait-badge">{currentWait.waitNumber}번</span> · {currentWait.name}</> : '대기등록 후 주문을 연결할 수 있어요.'}
                   </div>
                 </div>
-                {activeWaitOrders.length > 0 && <div className="status-sub">주문 {activeWaitOrders.length}건</div>}
+                <div className="status-meta-group">
+                  {activeWaitOrders.length > 0 && <div className="status-sub">주문 {activeWaitOrders.length}건</div>}
+                  <div className="status-sub">배정 좌석: {activeWaitNumber ? (seatAssignments[String(activeWaitNumber)] ? `${seatAssignments[String(activeWaitNumber)]}번` : '미배정') : '대기등록 후 확인 가능'}</div>
+                </div>
               </div>
 
               <div className="menu-list">
@@ -470,6 +597,7 @@ export default function App() {
 
                         <div className="wait-footer-meta">
                           <span>예상 대기 {estimateWaitPosition(idx)}분</span>
+                          <span>· 좌석 {seatAssignments[String(w.waitNumber)] ? `${seatAssignments[String(w.waitNumber)]}번` : '미배정'}</span>
                         </div>
                       </div>
                       <div className="wait-actions-inline">
