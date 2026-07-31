@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const SAMPLE_MENU = [
-  { id: 1, name: '순두부찌개', category: '전체', price: 12000, desc: '얼큰하고 따뜻한 순두부찌개' },
-  { id: 2, name: '콩국수', category: '전체', price: 9000, desc: '시원하고 고소한 콩국수' },
-  { id: 3, name: '두루치기', category: '전체', price: 9000, desc: '달콤하고 진한 두루치기' },
-  { id: 4, name: '두부조림', category: '전체', price: 13000, desc: '부드럽고 담백한 두부조림' }
+  { id: 1, name: '순두부찌개', category: '식사', price: 12000, desc: '얼큰하고 따뜻한 순두부찌개' },
+  { id: 2, name: '콩국수', category: '식사', price: 9000, desc: '시원하고 고소한 콩국수' },
+  { id: 3, name: '두루치기', category: '식사', price: 9000, desc: '달콤하고 진한 두루치기' },
+  { id: 4, name: '두부조림', category: '식사', price: 13000, desc: '부드럽고 담백한 두부조림' }
 ]
+
+const DEFAULT_CATEGORY_ORDER = ['식사', '계절메뉴', '주류/음료', '포장판매']
 
 const STATUS_OPTIONS = ['접수', '준비중', '완료']
 const ADMIN_PASSWORD = '1234'
@@ -27,7 +29,7 @@ function getStoredValue(key, fallback) {
 
 export default function App() {
   const [menu, setMenu] = useState(() => getStoredValue('menuItems', SAMPLE_MENU))
-  const [category, setCategory] = useState('전체')
+  const [category, setCategory] = useState('식사')
   const [cart, setCart] = useState(() => getStoredValue('cart', []))
   const [view, setView] = useState('menu')
   const [waitlist, setWaitlist] = useState(() => getStoredValue('waitlist', []))
@@ -43,11 +45,14 @@ export default function App() {
   })
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => getStoredValue('adminAuthenticated', false))
   const [adminPassword, setAdminPassword] = useState('')
-  const [adminMenuForm, setAdminMenuForm] = useState({ id: null, name: '', price: '', desc: '', category: '' })
+  const [adminMenuForm, setAdminMenuForm] = useState({ id: null, name: '', price: '', desc: '', category: '식사', isTakeout: false })
+  const [takeoutMenu, setTakeoutMenu] = useState(() => getStoredValue('takeoutMenu', []))
+  const [takeoutForm, setTakeoutForm] = useState({ id: null, name: '', price: '', desc: '', isActive: true })
   const [form, setForm] = useState({ name: '', phone: '', party: 2 })
   const [orderInfo, setOrderInfo] = useState(null)
 
   useEffect(() => { localStorage.setItem('menuItems', JSON.stringify(menu)) }, [menu])
+  useEffect(() => { localStorage.setItem('takeoutMenu', JSON.stringify(takeoutMenu)) }, [takeoutMenu])
   useEffect(() => { localStorage.setItem('cart', JSON.stringify(cart)) }, [cart])
   useEffect(() => { localStorage.setItem('waitlist', JSON.stringify(waitlist)) }, [waitlist])
   useEffect(() => { localStorage.setItem('orders', JSON.stringify(orders)) }, [orders])
@@ -83,8 +88,11 @@ export default function App() {
     }
   }, [waitlist, seatTargetWaitNumber])
 
-  const categories = useMemo(() => ['전체', ...Array.from(new Set(menu.map(m => m.category)))], [menu])
-  const filtered = useMemo(() => category === '전체' ? menu : menu.filter(m => m.category === category), [menu, category])
+  const categories = useMemo(() => DEFAULT_CATEGORY_ORDER.filter(cat => cat === '포장판매' || menu.some(m => m.category === cat) || (cat === '포장판매' && takeoutMenu.some(item => item.isActive))), [menu, takeoutMenu])
+  const filtered = useMemo(() => {
+    if (category === '포장판매') return takeoutMenu.filter(item => item.isActive)
+    return menu.filter(m => m.category === category)
+  }, [menu, category, takeoutMenu])
   const currentWait = useMemo(() => waitlist.find(w => w.waitNumber === activeWaitNumber) || null, [waitlist, activeWaitNumber])
   const activeWaitOrders = useMemo(() => orders.filter(o => o.waitNumber === activeWaitNumber), [orders, activeWaitNumber])
   const groupedOrders = useMemo(() => {
@@ -214,7 +222,7 @@ export default function App() {
   }
 
   function resetAdminMenuForm() {
-    setAdminMenuForm({ id: null, name: '', price: '', desc: '', category: '' })
+    setAdminMenuForm({ id: null, name: '', price: '', desc: '', category: '식사', isTakeout: false })
   }
 
   function handleAdminMenuSubmit(e) {
@@ -244,7 +252,39 @@ export default function App() {
   }
 
   function handleAdminEdit(item) {
-    setAdminMenuForm({ id: item.id, name: item.name, price: String(item.price), desc: item.desc, category: item.category })
+    setAdminMenuForm({ id: item.id, name: item.name, price: String(item.price), desc: item.desc, category: item.category, isTakeout: false })
+  }
+
+  function resetTakeoutForm() {
+    setTakeoutForm({ id: null, name: '', price: '', desc: '', isActive: true })
+  }
+
+  function handleTakeoutSubmit(e) {
+    e.preventDefault()
+    const trimmedName = takeoutForm.name.trim()
+    const trimmedDesc = takeoutForm.desc.trim()
+    const priceValue = Number(takeoutForm.price)
+
+    if (!trimmedName || !trimmedDesc || Number.isNaN(priceValue) || priceValue <= 0) {
+      alert('포장판매 메뉴 이름, 가격, 설명을 모두 입력해주세요.')
+      return
+    }
+
+    if (takeoutForm.id) {
+      setTakeoutMenu(prev => prev.map(item => item.id === takeoutForm.id ? { ...item, name: trimmedName, price: priceValue, desc: trimmedDesc, isActive: takeoutForm.isActive } : item))
+    } else {
+      setTakeoutMenu(prev => [...prev, { id: Date.now(), name: trimmedName, price: priceValue, desc: trimmedDesc, isActive: takeoutForm.isActive }])
+    }
+
+    resetTakeoutForm()
+  }
+
+  function handleTakeoutDelete(id) {
+    setTakeoutMenu(prev => prev.filter(item => item.id !== id))
+  }
+
+  function handleTakeoutEdit(item) {
+    setTakeoutForm({ id: item.id, name: item.name, price: String(item.price), desc: item.desc, isActive: item.isActive })
   }
 
   function updateOrderStatus(orderId, status) {
@@ -254,7 +294,7 @@ export default function App() {
   return (
     <div className="app-root">
       <header className="app-header">
-        <h1 className="brand">스마트 주문 — 식당</h1>
+        <h1 className="brand">천성산가는길 두부전문점</h1>
         <div className="header-actions">
           <button className="btn ghost" onClick={() => setView('menu')}>메뉴</button>
           <button className="btn" onClick={() => setView('checkout')}>장바구니 ({cart.reduce((s, c) => s + c.qty, 0)})</button>
@@ -401,6 +441,47 @@ export default function App() {
               </div>
 
               <div className="admin-card">
+                <h3>포장판매 메뉴 관리</h3>
+                <form className="admin-form" onSubmit={handleTakeoutSubmit}>
+                  <label>메뉴명
+                    <input value={takeoutForm.name} onChange={e => setTakeoutForm(prev => ({ ...prev, name: e.target.value }))} placeholder="포장판매 메뉴명" />
+                  </label>
+                  <label>가격
+                    <input type="number" min="1" value={takeoutForm.price} onChange={e => setTakeoutForm(prev => ({ ...prev, price: e.target.value }))} placeholder="10000" />
+                  </label>
+                  <label>설명
+                    <input value={takeoutForm.desc} onChange={e => setTakeoutForm(prev => ({ ...prev, desc: e.target.value }))} placeholder="설명" />
+                  </label>
+                  <label>판매 여부
+                    <select value={takeoutForm.isActive ? 'true' : 'false'} onChange={e => setTakeoutForm(prev => ({ ...prev, isActive: e.target.value === 'true' }))}>
+                      <option value="true">판매 중</option>
+                      <option value="false">판매 중지</option>
+                    </select>
+                  </label>
+                  <div className="admin-actions">
+                    <button className="btn" type="submit">{takeoutForm.id ? '포장판매 수정' : '포장판매 추가'}</button>
+                    <button className="btn soft" type="button" onClick={resetTakeoutForm}>초기화</button>
+                  </div>
+                </form>
+
+                <div className="admin-list">
+                  {takeoutMenu.map(item => (
+                    <div className="admin-list-item" key={item.id}>
+                      <div>
+                        <strong>{item.name}</strong>
+                        <div className="muted small">{formatCurrency(item.price)} · {item.isActive ? '판매 중' : '판매 중지'}</div>
+                        <div className="muted small">{item.desc}</div>
+                      </div>
+                      <div className="admin-item-actions">
+                        <button className="btn soft" type="button" onClick={() => handleTakeoutEdit(item)}>수정</button>
+                        <button className="btn ghost" type="button" onClick={() => handleTakeoutDelete(item.id)}>삭제</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="admin-card">
                 <h3>주문 관리</h3>
                 {Object.entries(groupedOrders).length === 0 ? (
                   <div className="empty">현재 주문이 없습니다.</div>
@@ -450,7 +531,13 @@ export default function App() {
               <h2>카테고리</h2>
               <div className="categories">
                 {categories.map(cat => (
-                  <button key={cat} className={cat === category ? 'chip active' : 'chip'} onClick={() => setCategory(cat)}>{cat}</button>
+                  <button
+                    key={cat}
+                    className={cat === category ? 'chip active' : 'chip'}
+                    onClick={() => setCategory(cat)}
+                  >
+                    {cat}
+                  </button>
                 ))}
               </div>
             </div>
@@ -640,7 +727,7 @@ export default function App() {
       <footer className="app-footer">
         <div>간단한 스마트 주문 데모 • 반응형 디자인</div>
         <div className="footer-actions">
-          <button className="btn small" onClick={() => { setCategory('전체'); setView('menu') }}>홈</button>
+          <button className="btn small" onClick={() => { setCategory('식사'); setView('menu') }}>홈</button>
           <button className="btn small ghost" onClick={() => { setView('checkout') }}>장바구니</button>
         </div>
       </footer>
