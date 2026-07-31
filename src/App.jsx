@@ -88,7 +88,7 @@ export default function App() {
     }
   }, [waitlist, seatTargetWaitNumber])
 
-  const categories = useMemo(() => DEFAULT_CATEGORY_ORDER.filter(cat => cat === '포장판매' || menu.some(m => m.category === cat) || (cat === '포장판매' && takeoutMenu.some(item => item.isActive))), [menu, takeoutMenu])
+  const categories = useMemo(() => DEFAULT_CATEGORY_ORDER, [])
   const filtered = useMemo(() => {
     if (category === '포장판매') return takeoutMenu.filter(item => item.isActive)
     return menu.filter(m => m.category === category)
@@ -415,7 +415,11 @@ export default function App() {
                     <input value={adminMenuForm.desc} onChange={e => setAdminMenuForm(prev => ({ ...prev, desc: e.target.value }))} placeholder="설명" />
                   </label>
                   <label>카테고리
-                    <input value={adminMenuForm.category} onChange={e => setAdminMenuForm(prev => ({ ...prev, category: e.target.value }))} placeholder="전체" />
+                    <select value={adminMenuForm.category} onChange={e => setAdminMenuForm(prev => ({ ...prev, category: e.target.value }))}>
+                      <option value="식사">식사</option>
+                      <option value="계절메뉴">계절메뉴</option>
+                      <option value="주류/음료">주류/음료</option>
+                    </select>
                   </label>
                   <div className="admin-actions">
                     <button className="btn" type="submit">{adminMenuForm.id ? '메뉴 수정' : '메뉴 추가'}</button>
@@ -557,18 +561,24 @@ export default function App() {
               </div>
 
               <div className="menu-list">
-                {filtered.map(item => (
-                  <article className="menu-card" key={item.id}>
-                    <div className="menu-body">
-                      <h3>{item.name}</h3>
-                      <p className="muted">{item.desc}</p>
-                      <div className="price">{formatCurrency(item.price)}</div>
-                    </div>
-                    <div className="menu-actions">
-                      <button className="btn" onClick={() => addToCart(item)}>담기</button>
-                    </div>
-                  </article>
-                ))}
+                {filtered.length === 0 ? (
+                  <div className="empty">
+                    {category === '포장판매' ? '등록된 포장판매 메뉴가 없습니다' : '등록된 메뉴가 없습니다'}
+                  </div>
+                ) : (
+                  filtered.map(item => (
+                    <article className="menu-card" key={item.id}>
+                      <div className="menu-body">
+                        <h3>{item.name}</h3>
+                        <p className="muted">{item.desc}</p>
+                        <div className="price">{formatCurrency(item.price)}</div>
+                      </div>
+                      <div className="menu-actions">
+                        <button className="btn" onClick={() => addToCart(item)}>담기</button>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </div>
           </section>
