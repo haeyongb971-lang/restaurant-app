@@ -95,7 +95,7 @@
   .sidebar{width:100%;display:flex;overflow:auto}
   .wait-form, .admin-login-form, .admin-form{grid-template-columns:1fr}
   .admin-grid{grid-template-columns:1fr}
-  .menu-list{grid-template-columns:repeat(auto-fill,minmax:160px,1fr))}
+  .menu-list{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
 }
 
 @media (max-width:480px){
