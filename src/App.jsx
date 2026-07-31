@@ -2,13 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const SAMPLE_MENU = [
-  { id: 1, name: '치즈버거', category: '버거', price: 8500, desc: '고소한 치즈와 신선한 패티' },
-  { id: 2, name: '불고기버거', category: '버거', price: 9200, desc: '달콤한 불고기 소스' },
-  { id: 3, name: '감자튀김', category: '사이드', price: 3500, desc: '바삭한 프렌치프라이' },
-  { id: 4, name: '콜라', category: '음료', price: 2000, desc: '시원한 탄산음료' },
-  { id: 5, name: '치즈스틱', category: '사이드', price: 4200, desc: '녹는 치즈의 유혹' },
-  { id: 6, name: '치킨마요', category: '샌드위치', price: 7500, desc: '매콤달콤 치킨마요' },
-  { id: 7, name: '시저샐러드', category: '샐러드', price: 6800, desc: '신선한 채소와 시저드레싱' }
+  { id: 1, name: '순두부찌개', category: '전체', price: 12000, desc: '얼큰하고 따뜻한 순두부찌개' },
+  { id: 2, name: '콩국수', category: '전체', price: 9000, desc: '시원하고 고소한 콩국수' },
+  { id: 3, name: '두루치기', category: '전체', price: 9000, desc: '달콤하고 진한 두루치기' },
+  { id: 4, name: '두부조림', category: '전체', price: 13000, desc: '부드럽고 담백한 두부조림' }
 ]
 
 function formatCurrency(n) {
@@ -103,11 +100,11 @@ export default function App() {
 
             <div className="menu-list">
               {filtered.map(item => (
-                <article className="menu-card" key={item.id}>
-                  <div className="menu-body">
-                    <h3>{item.name}</h3>
-                    <p className="muted">{item.desc}</p>
-                    <div className="price">{formatCurrency(item.price)}</div>
+                <article className="menu-card" key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '1.2rem 1.3rem', borderRadius: '16px', border: '1px solid #f2d8a8', background: '#fffdf8' }}>
+                  <div className="menu-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#2f241d' }}>{item.name}</h3>
+                    <p className="muted" style={{ margin: 0, fontSize: '0.95rem' }}>{item.desc}</p>
+                    <div className="price" style={{ fontSize: '1.2rem', fontWeight: 800, color: '#b85c00' }}>{formatCurrency(item.price)}</div>
                   </div>
                   <div className="menu-actions">
                     <button className="btn" onClick={() => addToCart(item)}>담기</button>
